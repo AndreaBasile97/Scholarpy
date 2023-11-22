@@ -146,7 +146,7 @@ class SnowballerApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("Snowballer App")
+        self.title("Scholarpy - by Andrea Basile")
         self.create_menu()
         self.current_frame = None
 

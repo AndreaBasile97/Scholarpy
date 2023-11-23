@@ -1,11 +1,29 @@
 import re
 import pandas
 import pandas as pd
+import os
 
 
 def clean_filename(title):
     # Rimuovi tutti i caratteri speciali non consentiti per i nomi di file
     return re.sub(r'[\/:*?"<>|-]', "", title)
+
+
+def get_csv_names(path_cartella):
+    # Verifica se il percorso esiste
+    if not os.path.exists(path_cartella):
+        raise FileNotFoundError(f"Il percorso '{path_cartella}' non esiste.")
+
+    # Ottieni la lista dei file nella cartella
+    files = os.listdir(path_cartella)
+
+    # Filtra solo i file con estensione .csv
+    csv_files = [file for file in files if file.endswith(".csv")]
+
+    # Restituisci la lista di file CSV completi di percorso
+    csv_paths = [os.path.join(path_cartella, csv_file) for csv_file in csv_files]
+
+    return csv_paths
 
 
 def csv_appender(csv_files):
@@ -46,7 +64,7 @@ def csv_appender(csv_files):
 def read_and_split_lines(file_path):
     result = []
 
-    with open(file_path, "r", encoding='utf-8') as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
 
         # Rimuovi caratteri di nuova linea (\n) e spazi bianchi extra
@@ -74,3 +92,7 @@ def read_and_split_lines(file_path):
 #     "What Clinicians Want Contextualizing Explainable Machine Learning for Clinical End Use (mlr.press).csv",
 # ]
 # csv_appender(csv_files_list)
+
+
+# names_list = get_csv_names("forward")
+# csv_appender(names_list)

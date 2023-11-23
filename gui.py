@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from snowballer import search_paper_id, get_citations_info
 from utils import clean_filename, read_and_split_lines
+import time
 
 
 class SnowballerGUI(tk.Frame):
@@ -129,6 +130,7 @@ class BulkSnowballerGUI(tk.Frame):
 
         for paper in paper_list:
             print(paper)
+            time.sleep(2)
             paper_id = search_paper_id(paper)
             print(paper_id)
             try:

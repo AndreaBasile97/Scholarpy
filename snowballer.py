@@ -45,16 +45,28 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
 
     base_url = "https://api.semanticscholar.org/graph/v1/paper/"
     citations_url = f"{base_url}{paper_id}/{snowballing_type}?fields=paperId,title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles&limit={limit}"
+    st_code = 500
 
     # Effettua la richiesta all'API
-    response = requests.get(citations_url)
+    while st_code >= 500:
+        response = requests.get(citations_url)
+        st_code = response.status_code
 
     # Verifica se la richiesta è andata a buon fine (status code 200)
     if response.status_code == 200:
         # Apri un file CSV in modalità scrittura
         with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
             # Definisci i nomi delle colonne nel file CSV
-            fieldnames = ["Id","Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
+            fieldnames = [
+                "Id",
+                "Title",
+                "BibTex",
+                "DOI",
+                "Authors",
+                "Year",
+                "Fields",
+                "Link",
+            ]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             # Scrivi l'intestazione nel file CSV

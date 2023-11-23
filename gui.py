@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk
 from snowballer import search_paper_id, get_citations_info
 from utils import clean_filename, read_and_split_lines
 import time
+from auto_pdf_downloader import get_paper_details, get_pdf_urls, download_pdfs
 
 
 class SnowballerGUI(tk.Frame):
@@ -144,6 +145,38 @@ class BulkSnowballerGUI(tk.Frame):
                 print(f"paper :{paper} non trovato")
 
 
+class AutoPDFdownloader(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.grid()
+        self.create_widgets()
+
+    def create_widgets(self):
+        # Creazione e posizionamento degli elementi dell'interfaccia
+        tk.Label(self, text="Upload Txt File containing PDF ids:").grid(
+            row=0, column=0, padx=10, pady=5
+        )
+        self.upload_button = tk.Button(self, text="Upload", command=self.upload_file)
+        self.upload_button.grid(row=0, column=1, padx=10, pady=5)
+
+        self.download_button = tk.Button(self, text="Download", command=self.download)
+        self.download_button.grid(row=2, column=0, columnspan=2, pady=10)
+
+    def upload_file(self):
+        self.file_path = filedialog.askopenfilename(title="Select a TXT file")
+
+    def download(self):
+        if not hasattr(self, "file_path"):
+            messagebox.showerror("Errore", "Seleziona prima un file TXT.")
+            return
+
+        paper_list_ids = read_and_split_lines(self.file_path)
+
+        papers_details = get_paper_details(paper_list_ids)
+        pdf_urls, pdf_titles = get_pdf_urls(papers_details)
+        download_pdfs(pdf_urls, pdf_titles)
+
+
 class SnowballerApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -161,6 +194,9 @@ class SnowballerApp(tk.Tk):
             label="Single Paper Search", command=self.show_single_paper_search
         )
         file_menu.add_command(label="Bulk Search", command=self.show_bulk_search)
+        file_menu.add_command(
+            label="Auto PDF downloader", command=self.show_pdf_downloader
+        )
         menu_bar.add_cascade(label="Menu", menu=file_menu)
 
         self.config(menu=menu_bar)
@@ -175,6 +211,12 @@ class SnowballerApp(tk.Tk):
         if self.current_frame:
             self.current_frame.destroy()
         self.current_frame = BulkSnowballerGUI(self)
+        self.current_frame.grid()
+
+    def show_pdf_downloader(self):
+        if self.current_frame:
+            self.current_frame.destroy()
+        self.current_frame = AutoPDFdownloader(self)
         self.current_frame.grid()
 
 

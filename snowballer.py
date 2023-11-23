@@ -44,7 +44,7 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
     csv_path = os.path.join(folder_name, csv_filename)
 
     base_url = "https://api.semanticscholar.org/graph/v1/paper/"
-    citations_url = f"{base_url}{paper_id}/{snowballing_type}?fields=title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles&limit={limit}"
+    citations_url = f"{base_url}{paper_id}/{snowballing_type}?fields=paperId,title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles&limit={limit}"
 
     # Effettua la richiesta all'API
     response = requests.get(citations_url)
@@ -54,7 +54,7 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
         # Apri un file CSV in modalità scrittura
         with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
             # Definisci i nomi delle colonne nel file CSV
-            fieldnames = ["Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
+            fieldnames = ["Id","Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             # Scrivi l'intestazione nel file CSV
@@ -71,7 +71,7 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
                 else:
                     citing_paper = entry["citedPaper"]
                 titolo = citing_paper["title"]
-                paper_id = citing_paper["paperId"]
+                citing_paper_id = citing_paper["paperId"]
                 journal = citing_paper.get("journal", {})
                 fields_of_study = citing_paper.get("fieldsOfStudy")
                 try:
@@ -104,6 +104,7 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
                 # Scrivi le informazioni nel file CSV
                 writer.writerow(
                     {
+                        "Id": citing_paper_id,
                         "Title": titolo,
                         "BibTex": bibTex,
                         "DOI": doi,

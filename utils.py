@@ -46,7 +46,7 @@ def csv_appender(csv_files):
 def read_and_split_lines(file_path):
     result = []
 
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding='utf-8') as file:
         lines = file.readlines()
 
         # Rimuovi caratteri di nuova linea (\n) e spazi bianchi extra

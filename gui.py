@@ -162,6 +162,9 @@ class AutoPDFdownloader(tk.Frame):
         self.download_button = tk.Button(self, text="Download", command=self.download)
         self.download_button.grid(row=2, column=0, columnspan=2, pady=10)
 
+        self.result_label = tk.Label(self, text="")
+        self.result_label.grid(row=6, column=0, columnspan=2, pady=5)
+
     def upload_file(self):
         self.file_path = filedialog.askopenfilename(title="Select a TXT file")
 
@@ -175,6 +178,10 @@ class AutoPDFdownloader(tk.Frame):
         papers_details = get_paper_details(paper_list_ids)
         pdf_urls, pdf_titles = get_pdf_urls(papers_details)
         download_pdfs(pdf_urls, pdf_titles)
+        self.result_label.config(
+            text=f"Ho salvato i pdf. Puoi trovare quelli scartati in pdf_not_found_titles.txt e pdf_not_downloaded.txt",
+            fg="green",
+        )
 
 
 class SnowballerApp(tk.Tk):

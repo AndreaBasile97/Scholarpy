@@ -40,7 +40,10 @@ def get_pdf_urls(paper_details):
 
             pdf_title = paper['title']
             pdf_titles.append(pdf_title)
-
+        else:
+            # Se il PDF non è disponibile, aggiungi il titolo al file "pdf_not_found_titles.txt"
+            with open("pdf_not_found_titles.txt", "a") as file:
+                file.write(paper['title'] + '\n')
     return pdf_urls, pdf_titles
 
 

@@ -1,7 +1,7 @@
 import requests
 import json
 import os
-from utils import clean_filename, read_and_split_lines
+from scholarpy.utils import clean_filename, read_and_split_lines
 import argparse
 import time
 

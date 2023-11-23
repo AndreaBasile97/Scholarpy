@@ -20,7 +20,6 @@ def get_paper_details(paper_ids):
         print(f"Errore nella richiesta: {response.status_code}")
         return None
 
-
 def get_pdf_urls(paper_details):
     pdf_urls = []
     pdf_titles = []

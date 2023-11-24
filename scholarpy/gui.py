@@ -1,10 +1,11 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
+from tkinter import ttk
 from scholarpy.snowballer import search_paper_id, get_citations_info
 from scholarpy.utils import clean_filename, read_and_split_lines
 import time
 from scholarpy.auto_pdf_downloader import get_paper_details, get_pdf_urls, download_pdfs
-
+import threading
 
 class SnowballerGUI(tk.Frame):
     def __init__(self, master=None):
@@ -114,12 +115,28 @@ class BulkSnowballerGUI(tk.Frame):
         backward_radio.grid(row=1, column=1, padx=10, pady=5)
 
         self.snowball_button = tk.Button(
-            self, text="Bulk Snowball", command=self.bulk_snowball
+            self, text="Bulk Snowball", command=self.start_bulk_snowball
         )
         self.snowball_button.grid(row=2, column=0, columnspan=2, pady=10)
 
+        # Progressbar
+        self.progressbar = ttk.Progressbar(self, orient="horizontal", mode="determinate")
+        self.progressbar.grid(row=3, column=0, columnspan=2, pady=10)
+
+        # Label for percentage
+        self.percent_label = tk.Label(self, text="")
+        self.percent_label.grid(row=4, column=0, columnspan=2, pady=5)
+
     def upload_file(self):
         self.file_path = filedialog.askopenfilename(title="Select a TXT file")
+
+    def start_bulk_snowball(self):
+        # Disattiva il pulsante durante l'esecuzione del processo
+        self.snowball_button.config(state="disabled")
+
+        # Avvia il processo bulk snowball in un thread separato
+        self.snowball_thread = threading.Thread(target=self.bulk_snowball)
+        self.snowball_thread.start()
 
     def bulk_snowball(self):
         if not hasattr(self, "file_path"):
@@ -129,8 +146,9 @@ class BulkSnowballerGUI(tk.Frame):
         paper_list = read_and_split_lines(self.file_path)
         forward = bool(self.snowball_direction.get())
 
-        for paper in paper_list:
- 
+        total_papers = len(paper_list)
+        self.progressbar["maximum"] = total_papers
+        for i, paper in enumerate(paper_list):
             time.sleep(2)
             paper_id = search_paper_id(paper)
 
@@ -144,6 +162,13 @@ class BulkSnowballerGUI(tk.Frame):
             except:
                 print(f"paper :{paper} non trovato")
 
+            self.progressbar["value"] = i + 1
+            percent = round(((i + 1) / total_papers) * 100, 2)
+            self.percent_label["text"] = f"Progress: {percent}%"
+            self.update_idletasks()
+
+        # Riattiva il pulsante al termine del processo
+        self.snowball_button.config(state="normal")
 
 class AutoPDFdownloader(tk.Frame):
     def __init__(self, master=None):
@@ -191,7 +216,8 @@ class SnowballerApp(tk.Tk):
         self.title("Scholarpy - by Andrea Basile")
         self.create_menu()
         self.current_frame = None
-
+        self.geometry("800x600")
+        
     def create_menu(self):
         menu_bar = tk.Menu(self)
 

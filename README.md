@@ -1,30 +1,49 @@
-# Scholarpy
+# Scholarpy 📚
+
 Author: Andrea Basile
-A wrapper for Semantic Scholar APIs. This tool was made to make easier scholar reasearch.
 
-## Guide
+A wrapper for Semantic Scholar APIs, Scholarpy simplifies scholarly research by providing easy access to paper information.
 
-### Snowballing
+## Guide 📖
 
-Snowballing is a technique that consists in getting all the references from a specific paper (backward) or
-all the citations of that very same paper.
+### Snowballing ❄️
 
-Thanks to Scholarpy you can do it easly having a csv file as result containing all the main informations about the references 
-such as:
+Snowballing is a technique that involves obtaining all references (backward) or citations (forward) from a specific paper. This process is then repeated for each new reference/citation found. However, these scripts perform a one-step snowballing starting from the seed papers.
 
-- title
-- bibTex
+Thanks to Scholarpy, you can easily perform snowballing and obtain a CSV file containing essential information about the references, including:
+
+- Paper id
+- Title
+- BibTeX
 - DOI
-- link
-- year
+- Link
+- Year
 - Authors
 
-Quick start:
+## Quick Start 🚀
 
-1. using
+1. **Using GUI:**
 
-        python gui.py
+    ```bash
+    python -m scholarpy.gui
+    ```
 
-2. using args
+2. **Using command-line arguments for single paper snowballing:**
 
-        python -m snowballer [add args here that you can find in snowballer.py file]
+    ```bash
+    python -m scholarpy.snowballer --paper_title '' --paper_id '' --limit 1000 --csv_filename papers.csv --forward True
+    ```
+
+3. **Using command-line arguments for multiple papers snowballing:**
+
+    ```bash
+    python -m scholarpy.snowballer --batch_path results.txt --forward True
+    ```
+
+## Contributing 🤝
+
+Feel free to contribute to Scholarpy by opening issues or submitting pull requests. Your feedback and contributions are highly appreciated!
+
+## License 📄
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

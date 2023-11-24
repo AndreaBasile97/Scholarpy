@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from snowballer import search_paper_id, get_citations_info
-from utils import clean_filename, read_and_split_lines
+from scholarpy.snowballer import search_paper_id, get_citations_info
+from scholarpy.utils import clean_filename, read_and_split_lines
 import time
-from auto_pdf_downloader import get_paper_details, get_pdf_urls, download_pdfs
+from scholarpy.auto_pdf_downloader import get_paper_details, get_pdf_urls, download_pdfs
 
 
 class SnowballerGUI(tk.Frame):
@@ -130,8 +130,10 @@ class BulkSnowballerGUI(tk.Frame):
         forward = bool(self.snowball_direction.get())
 
         for paper in paper_list:
+ 
             time.sleep(2)
             paper_id = search_paper_id(paper)
+
             try:
                 get_citations_info(
                     paper_id=paper_id,

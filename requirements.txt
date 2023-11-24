@@ -1,2 +1,4 @@
 requests
 pandas
+colorama
+load_dotenv

@@ -130,10 +130,8 @@ class BulkSnowballerGUI(tk.Frame):
         forward = bool(self.snowball_direction.get())
 
         for paper in paper_list:
-            print(paper)
             time.sleep(2)
             paper_id = search_paper_id(paper)
-            print(paper_id)
             try:
                 get_citations_info(
                     paper_id=paper_id,

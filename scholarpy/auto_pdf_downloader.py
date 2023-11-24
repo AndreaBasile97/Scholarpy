@@ -57,8 +57,6 @@ def download_pdfs(pdf_urls, pdf_titles, download_path="pdf_downloads", max_retri
                         )
                         with open(file_path, "wb") as pdf_file:
                             pdf_file.write(response.content)
-
-                        print(f"File {file_path} downloaded successfully.")
                         break  # Break out of the retry loop if successful
                     except Exception as e:
                         print(f"Error saving file: {e}")

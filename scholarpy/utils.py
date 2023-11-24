@@ -2,7 +2,8 @@ import re
 import pandas
 import pandas as pd
 import os
-
+import requests
+from colorama import Fore, Style
 
 def clean_filename(title):
     # Rimuovi tutti i caratteri speciali non consentiti per i nomi di file
@@ -75,6 +76,25 @@ def read_and_split_lines(file_path):
 
     return result
 
+
+def create_folder_if_not_exists(folder_name):
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+
+def make_api_request(url, api_key=None):
+    headers = {}
+    if api_key:
+        headers["x-api-key"] = api_key
+    else:
+        print(f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}")
+
+    response = requests.get(url, headers=headers)
+    
+    while response.status_code >= 500:
+        response = requests.get(url, headers=headers)
+    
+    return response
 
 # Esempio di utilizzo
 # file_path = "bulk.txt"

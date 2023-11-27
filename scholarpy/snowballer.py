@@ -36,8 +36,10 @@ def search_paper_id(paper_title):
 def extract_citation_info(entry, forward=True):
     if forward:
         citing_paper = entry["citingPaper"]
-    else:
+    elif forward==False:
         citing_paper = entry["citedPaper"]
+    elif forward==None:
+        citing_paper = entry
 
     titolo = citing_paper["title"]
     citing_paper_id = citing_paper["paperId"]
@@ -66,9 +68,15 @@ def extract_citation_info(entry, forward=True):
     }
 
 def write_to_csv(csv_path, fieldnames, data):
-    with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+    mode = "a" if os.path.exists(csv_path) else "w"
+    
+    with open(csv_path, mode, newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+
+        # If it's a new file, write the header
+        if mode == "w":
+            writer.writeheader()
+        
         writer.writerows(data)
 
 def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
@@ -87,19 +95,24 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
     csv_path = os.path.join(folder_name, csv_filename)
 
     base_url = "https://api.semanticscholar.org/graph/v1/paper/"
+    seed_url = f"{base_url}{paper_id}?fields=paperId,title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles"
     citations_url = f"{base_url}{paper_id}/{snowballing_type}?fields=paperId,title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles&limit={limit}"
     
-    response = make_api_request(citations_url, api_key=api_key)
+    url_list = [seed_url, citations_url]
 
-    if response.status_code == 200:
-        data = response.json()["data"]
-        fieldnames = ["Id", "Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
+    for url in url_list:
+        response = make_api_request(url, api_key=api_key)
+        if response.status_code == 200:
+            fieldnames = ["Id", "Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
+            try:
+                data = response.json()["data"]
+                citation_info_list = [extract_citation_info(entry, forward=False) for entry in data]
+            except:
+                citation_info_list = [extract_citation_info(response.json(), forward=None)]
+            write_to_csv(csv_path, fieldnames, citation_info_list)
 
-        citation_info_list = [extract_citation_info(entry, forward) for entry in data]
-        write_to_csv(csv_path, fieldnames, citation_info_list)
-
-    else:
-        print(f"Errore nella richiesta API. Codice di stato: {response.status_code}")
+        else:
+            print(f"Errore nella richiesta API. Codice di stato: {response.status_code}")
 
 
 if __name__ == "__main__":
@@ -108,7 +121,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--paper_title",
-        help="Title of the paper for which to retrieve citations.",
+        help="Title of the paper for which to retrieve citations/references.",
     )
     parser.add_argument(
         "--batch_path",
@@ -134,12 +147,13 @@ if __name__ == "__main__":
     if args.paper_title:
         # Pulisci il titolo del paper prima di utilizzarlo
         args.paper_title = args.paper_title
-    if args.paper_id is None:
+    if args.paper_id is None and args.batch_path is None:
         # If paper_id is not provided, search for it using paper_title
         args.paper_id = search_paper_id(args.paper_title)
     if args.paper_id:
         get_citations_info(args.paper_id, args.csv_filename, args.limit, args.forward)
     if args.batch_path:
+        print("Snowballing avviato...")
         paper_list = read_and_split_lines(args.batch_path)
 
         for paper in paper_list:
@@ -152,5 +166,5 @@ if __name__ == "__main__":
                     limit=1000,
                     forward=args.forward,
                 )
-            except:
-                print(f"paper :{paper} non trovato")
+            except Exception as e:
+                print(f"paper :{paper} non trovato -> {e}")

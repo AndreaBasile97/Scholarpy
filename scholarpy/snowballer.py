@@ -67,16 +67,10 @@ def extract_citation_info(entry, forward=True):
         "Link": link,
     }
 
-def write_to_csv(csv_path, fieldnames, data):
-    mode = "a" if os.path.exists(csv_path) else "w"
-    
-    with open(csv_path, mode, newline="", encoding="utf-8") as csvfile:
+def write_to_csv(csv_path, fieldnames, data, mod="w"):
+    with open(csv_path, mod, newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        # If it's a new file, write the header
-        if mode == "w":
-            writer.writeheader()
-        
+        writer.writeheader()
         writer.writerows(data)
 
 def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
@@ -106,10 +100,11 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
             fieldnames = ["Id", "Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
             try:
                 data = response.json()["data"]
-                citation_info_list = [extract_citation_info(entry, forward=False) for entry in data]
+                citation_info_list = [extract_citation_info(entry, forward) for entry in data]
+                write_to_csv(csv_path, fieldnames, citation_info_list, mod="a")
             except:
                 citation_info_list = [extract_citation_info(response.json(), forward=None)]
-            write_to_csv(csv_path, fieldnames, citation_info_list)
+                write_to_csv(csv_path, fieldnames, citation_info_list, mod="w")
 
         else:
             print(f"Errore nella richiesta API. Codice di stato: {response.status_code}")
@@ -155,7 +150,6 @@ if __name__ == "__main__":
     if args.batch_path:
         print("Snowballing avviato...")
         paper_list = read_and_split_lines(args.batch_path)
-
         for paper in paper_list:
             time.sleep(2)
             paper_id = search_paper_id(paper)

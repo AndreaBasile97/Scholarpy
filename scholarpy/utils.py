@@ -4,20 +4,23 @@ import pandas as pd
 import os
 import requests
 from colorama import Fore, Style
-import time
 import csv
 
 from dotenv import load_dotenv
 
 load_dotenv()
-
 api_key = os.getenv("API_KEY")
+print(api_key)
 
 
-def write_to_csv(csv_path, fieldnames, data):
-    with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+def write_to_csv(csv_path, fieldnames, data, modality="w"):
+    with open(csv_path, modality, newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+
+        # If the file is empty, write the header
+        if modality == "w":
+            writer.writeheader()
+
         writer.writerows(data)
 
 
@@ -53,7 +56,7 @@ def extract_paper_details_batch(paper_details):
         )
         extracted_paper["year"] = paper.get("year", "")
         try:
-            extracted_paper["journal"] = paper.get("name", "")
+            extracted_paper["journal"] = paper.get("journal", "").get("name", "")
         except:
             extracted_paper["journal"] = "N/A"
 
@@ -61,7 +64,7 @@ def extract_paper_details_batch(paper_details):
 
     csv_path = "paper_details.csv"
     fieldnames = ["title", "citationStyles", "authors", "year", "journal"]
-    write_to_csv(csv_path, fieldnames, extracted_data)
+    write_to_csv(csv_path, fieldnames, extracted_data, modality="a")
 
     return extracted_data
 
@@ -70,7 +73,7 @@ def search_paper_id(paper_title):
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
     search_url = f"{base_url}?query={paper_title}"
 
-    response = requests.get(search_url)
+    response = make_api_request(search_url, api_key=api_key)
 
     if response.status_code == 200:
         search_data = response.json()
@@ -181,36 +184,9 @@ def make_api_request(url, api_key=None):
     return response
 
 
-# Esempio di utilizzo
-# file_path = "bulk.txt"
-# result = read_and_split_lines(file_path)
-# print(result)
-# csv_files_list = [
-#     "Adversarial attacks on medical machine learning  Science.csv",
-#     "Big data and machine learning algorithms for health-care delivery - The Lancet Oncology.csv",
-#     "Do no harm a roadmap for responsible machine learning for health care Nature Medicine.csv",
-#     "Patient clustering improves efficiency of federated machine learning to predict mortality and hospital stay time using distributed electronic medical records  ScienceDirect.csv",
-#     "Preparing Medical Imaging Data for Machine Learning  Radiology (rsna.org).csv",
-#     "Secure, privacy-preserving and federated machine learning in medical imaging Nature Machine Intelligence.csv",
-#     "Swarm Learning for decentralized and confidential clinical machine learning  Nature.csv",
-#     "The importance of interpretability and visualization in machine learning for applications in medicine and health care  SpringerLink.csv",
-#     "What Clinicians Want Contextualizing Explainable Machine Learning for Clinical End Use (mlr.press).csv",
-# ]
-# csv_appender(csv_files_list)
-
-
-# names_list = get_csv_names("forward")
-# csv_appender(names_list)
-
-print("Inzio...")
-p = get_paper_details_batch(
-    paper_ids=[
-        "b8a60a97ec164112332eb5165fe612be4f8302b1",
-        "80a0cb634164f3423553a0441293515205904f8f",
-        "563d7e3aff4370469e3feea2a14112023b3e629a",
-        "baa8cb2add3f4adc0e9954884638e6b82e45a63f",
-    ],
-    fields=["title", "citationStyles", "authors", "year", "journal"],
-)
-extract_paper_details_batch(p)
-print("Fine...")
+def paper_details_batch_wrapper(paper_titles_txt_path):
+    paper_list = read_and_split_lines(paper_titles_txt_path)
+    papers_details = get_paper_details_batch(
+        paper_list, fields=["titles", "citationStyles", "authors", "year", "journal"]
+    )
+    extract_paper_details_batch(papers_details)

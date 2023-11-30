@@ -4,6 +4,88 @@ import pandas as pd
 import os
 import requests
 from colorama import Fore, Style
+import time
+import csv
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api_key = os.getenv("API_KEY")
+
+
+def write_to_csv(csv_path, fieldnames, data):
+    with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(data)
+
+
+def get_paper_details_batch(
+    paper_ids, fields=["referenceCount", "citationCount", "title", "openAccessPdf"]
+):
+    base_url = "https://api.semanticscholar.org/graph/v1/paper/batch"
+
+    payload = {"ids": paper_ids}
+    response = requests.post(
+        base_url, params={"fields": ",".join(fields)}, json=payload
+    )
+
+    if response.status_code == 200:
+        paper_details = response.json()
+        # Restituisci i dettagli, inclusi gli URL degli articoli in formato PDF
+        return paper_details
+    else:
+        print(f"Errore nella richiesta: {response.status_code}")
+        return None
+
+
+def extract_paper_details_batch(paper_details):
+    extracted_data = []
+    for paper in paper_details:
+        extracted_paper = {}
+
+        # Estrai i dettagli richiesti
+        extracted_paper["title"] = paper.get("title", "")
+        extracted_paper["citationStyles"] = paper.get("citationStyles", "")
+        extracted_paper["authors"] = ", ".join(
+            [author["name"] for author in paper.get("authors", [])]
+        )
+        extracted_paper["year"] = paper.get("year", "")
+        try:
+            extracted_paper["journal"] = paper.get("name", "")
+        except:
+            extracted_paper["journal"] = "N/A"
+
+        extracted_data.append(extracted_paper)
+
+    csv_path = "paper_details.csv"
+    fieldnames = ["title", "citationStyles", "authors", "year", "journal"]
+    write_to_csv(csv_path, fieldnames, extracted_data)
+
+    return extracted_data
+
+
+def search_paper_id(paper_title):
+    base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
+    search_url = f"{base_url}?query={paper_title}"
+
+    response = requests.get(search_url)
+
+    if response.status_code == 200:
+        search_data = response.json()
+        papers = search_data.get("data", [])
+
+        if papers:
+            # Restituisci il paper ID del primo risultato della ricerca
+            return papers[0].get("paperId", None)
+        else:
+            print(f"Nessun risultato trovato per '{paper_title}'.")
+            return None
+    else:
+        print(f"Errore nella richiesta: {response.status_code}")
+        return None
+
 
 def clean_filename(title):
     # Rimuovi tutti i caratteri speciali non consentiti per i nomi di file
@@ -87,14 +169,17 @@ def make_api_request(url, api_key=None):
     if api_key:
         headers["x-api-key"] = api_key
     else:
-        print(f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}"
+        )
 
     response = requests.get(url, headers=headers)
-    
+
     while response.status_code >= 500:
         response = requests.get(url, headers=headers)
-    
+
     return response
+
 
 # Esempio di utilizzo
 # file_path = "bulk.txt"
@@ -116,3 +201,16 @@ def make_api_request(url, api_key=None):
 
 # names_list = get_csv_names("forward")
 # csv_appender(names_list)
+
+print("Inzio...")
+p = get_paper_details_batch(
+    paper_ids=[
+        "b8a60a97ec164112332eb5165fe612be4f8302b1",
+        "80a0cb634164f3423553a0441293515205904f8f",
+        "563d7e3aff4370469e3feea2a14112023b3e629a",
+        "baa8cb2add3f4adc0e9954884638e6b82e45a63f",
+    ],
+    fields=["title", "citationStyles", "authors", "year", "journal"],
+)
+extract_paper_details_batch(p)
+print("Fine...")

@@ -1,44 +1,32 @@
 import requests
 import csv
 import argparse
-from scholarpy.utils import clean_filename, create_folder_if_not_exists, make_api_request, read_and_split_lines
+from scholarpy.utils import (
+    clean_filename,
+    create_folder_if_not_exists,
+    make_api_request,
+    read_and_split_lines,
+    search_paper_id,
+    write_to_csv,
+)
 import os
 import time
 import os
 
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 api_key = os.getenv("API_KEY")
-
-def search_paper_id(paper_title):
-    base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
-    search_url = f"{base_url}?query={paper_title}"
-
-    response = requests.get(search_url)
-
-    if response.status_code == 200:
-        search_data = response.json()
-        papers = search_data.get("data", [])
-
-        if papers:
-            # Restituisci il paper ID del primo risultato della ricerca
-            return papers[0].get("paperId", None)
-        else:
-            print(f"Nessun risultato trovato per '{paper_title}'.")
-            return None
-    else:
-        print(f"Errore nella richiesta: {response.status_code}")
-        return None
 
 
 def extract_citation_info(entry, forward=True):
     if forward:
         citing_paper = entry["citingPaper"]
-    elif forward==False:
+    elif forward == False:
         citing_paper = entry["citedPaper"]
-    elif forward==None:
+    elif forward == None:
         citing_paper = entry
 
     titolo = citing_paper["title"]
@@ -67,11 +55,13 @@ def extract_citation_info(entry, forward=True):
         "Link": link,
     }
 
+
 def write_to_csv(csv_path, fieldnames, data, mod="w"):
     with open(csv_path, mod, newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(data)
+
 
 def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
     if forward:
@@ -91,23 +81,38 @@ def get_citations_info(paper_id, csv_filename, limit=1000, forward=True):
     base_url = "https://api.semanticscholar.org/graph/v1/paper/"
     seed_url = f"{base_url}{paper_id}?fields=paperId,title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles"
     citations_url = f"{base_url}{paper_id}/{snowballing_type}?fields=paperId,title,authors,journal,url,externalIds,year,fieldsOfStudy,citationStyles&limit={limit}"
-    
+
     url_list = [seed_url, citations_url]
 
     for url in url_list:
         response = make_api_request(url, api_key=api_key)
         if response.status_code == 200:
-            fieldnames = ["Id", "Title", "BibTex", "DOI", "Authors", "Year", "Fields", "Link"]
+            fieldnames = [
+                "Id",
+                "Title",
+                "BibTex",
+                "DOI",
+                "Authors",
+                "Year",
+                "Fields",
+                "Link",
+            ]
             try:
                 data = response.json()["data"]
-                citation_info_list = [extract_citation_info(entry, forward) for entry in data]
+                citation_info_list = [
+                    extract_citation_info(entry, forward) for entry in data
+                ]
                 write_to_csv(csv_path, fieldnames, citation_info_list, mod="a")
             except:
-                citation_info_list = [extract_citation_info(response.json(), forward=None)]
+                citation_info_list = [
+                    extract_citation_info(response.json(), forward=None)
+                ]
                 write_to_csv(csv_path, fieldnames, citation_info_list, mod="w")
 
         else:
-            print(f"Errore nella richiesta API. Codice di stato: {response.status_code}")
+            print(
+                f"Errore nella richiesta API. Codice di stato: {response.status_code}"
+            )
 
 
 if __name__ == "__main__":

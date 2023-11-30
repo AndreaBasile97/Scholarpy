@@ -1,4 +1,1 @@
-requests
-pandas
-colorama
-load_dotenv
+ÿþ

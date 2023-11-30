@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
-print(api_key)
 
 
 def write_to_csv(csv_path, fieldnames, data, modality="w"):
@@ -184,9 +183,10 @@ def make_api_request(url, api_key=None):
     return response
 
 
-def paper_details_batch_wrapper(paper_titles_txt_path):
+def paper_details_batch_wrapper(
+    paper_titles_txt_path,
+    fields=["titles", "citationStyles", "authors", "year", "journal"],
+):
     paper_list = read_and_split_lines(paper_titles_txt_path)
-    papers_details = get_paper_details_batch(
-        paper_list, fields=["titles", "citationStyles", "authors", "year", "journal"]
-    )
+    papers_details = get_paper_details_batch(paper_list, fields=fields)
     extract_paper_details_batch(papers_details)

@@ -79,20 +79,6 @@ Scholarpy automatically logs papers not found in order to keep track of the whol
 
 **Note: the gui may be not updated with all Scholarpy features**
 
-
-### Auto PDF Downloader 🗃️
-
-1. **Using command-line arguments for multiple paper pdfs downloading:**
-You should put the path to the .txt file containing paper_ids. Example:
-
-2437df4f5iny387d57d2377 <br>
-s32ny32s4ns4324324231ff <br>
-3xdrnnixrnyiwxonxw0732m <br>
-...
-
-    python -m scholarpy.auto_pdf_downloader --bulk_path paper_ids.txt 
-
-
 The pdf ids can be fetch using the snowballer.
 
 ## Contributing 🤝

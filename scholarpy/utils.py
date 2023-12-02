@@ -27,10 +27,14 @@ def get_paper_details_batch(
     paper_ids, fields=["referenceCount", "citationCount", "title", "openAccessPdf"]
 ):
     base_url = "https://api.semanticscholar.org/graph/v1/paper/batch"
-
+    paper_ids = [id for id in paper_ids if id is not None]
+    print(f"get_paper_details_batch({paper_ids}, {fields})")
     payload = {"ids": paper_ids}
-    response = requests.post(
-        base_url, params={"fields": ",".join(fields)}, json=payload
+    response = make_api_request(
+        url=base_url,
+        params={"fields": ",".join(fields)},
+        payload=payload,
+        api_key=api_key,
     )
 
     if response.status_code == 200:
@@ -38,7 +42,7 @@ def get_paper_details_batch(
         # Restituisci i dettagli, inclusi gli URL degli articoli in formato PDF
         return paper_details
     else:
-        print(f"Errore nella richiesta: {response.status_code}")
+        print(f"Errore nella richiesta batch: {response.status_code} per {paper_ids}")
         return None
 
 
@@ -58,11 +62,19 @@ def extract_paper_details_batch(paper_details):
             extracted_paper["journal"] = paper.get("journal", "").get("name", "")
         except:
             extracted_paper["journal"] = "N/A"
+        try:
+            external_ids = paper.get("externalIds", {})
+            extracted_paper["DOI"] = (
+                external_ids.get("DOI", "N/A") if external_ids else "N/A"
+            )
+        except:
+            pass
 
         extracted_data.append(extracted_paper)
 
     csv_path = "paper_details.csv"
-    fieldnames = ["title", "citationStyles", "authors", "year", "journal"]
+    fieldnames = ["title", "citationStyles", "authors", "year", "journal", "DOI"]
+    print(extracted_data)
     write_to_csv(csv_path, fieldnames, extracted_data, modality="a")
 
     return extracted_data
@@ -78,15 +90,13 @@ def search_paper_id(paper_title):
         search_data = response.json()
         papers = search_data.get("data", [])
 
-        if papers:
+        if papers and papers[0].get("paperId") is not None:
             # Restituisci il paper ID del primo risultato della ricerca
-            return papers[0].get("paperId", None)
+            return papers[0].get("paperId")
         else:
             print(f"Nessun risultato trovato per '{paper_title}'.")
-            return None
     else:
-        print(f"Errore nella richiesta: {response.status_code}")
-        return None
+        print(f"Errore nella richiesta singola: {response.status_code}")
 
 
 def clean_filename(title):
@@ -166,7 +176,7 @@ def create_folder_if_not_exists(folder_name):
         os.makedirs(folder_name)
 
 
-def make_api_request(url, api_key=None):
+def make_api_request(url, params=None, payload={}, api_key=None):
     headers = {}
     if api_key:
         headers["x-api-key"] = api_key
@@ -175,7 +185,10 @@ def make_api_request(url, api_key=None):
             f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}"
         )
 
-    response = requests.get(url, headers=headers)
+    if params is None and payload == {}:
+        response = requests.get(url, headers=headers)
+    else:
+        response = requests.post(url, headers=headers, params=params, json=payload)
 
     while response.status_code >= 500:
         response = requests.get(url, headers=headers)
@@ -187,6 +200,11 @@ def paper_details_batch_wrapper(
     paper_titles_txt_path,
     fields=["titles", "citationStyles", "authors", "year", "journal"],
 ):
+    paper_ids = []
     paper_list = read_and_split_lines(paper_titles_txt_path)
-    papers_details = get_paper_details_batch(paper_list, fields=fields)
+    for paper in paper_list:
+        paper_ids.append(search_paper_id(paper))
+    paper_ids = [id for id in paper_ids if id is not None]
+
+    papers_details = get_paper_details_batch(paper_ids, fields=fields)
     extract_paper_details_batch(papers_details)

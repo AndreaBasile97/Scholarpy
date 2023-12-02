@@ -3,6 +3,7 @@ from scholarpy.utils import (
     paper_details_batch_wrapper,
     search_paper_id,
     get_paper_details_batch,
+    extract_paper_details_batch,
 )
 
 
@@ -23,10 +24,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.fields:
-        args.fields = ["title", "citationStyles", "authors", "year", "journal"]
+        args.fields = [
+            "title",
+            "citationStyles",
+            "authors",
+            "year",
+            "journal",
+            "externalIds",
+        ]
     if args.batch_path:
-        paper_details_batch_wrapper(args.batch_path)
+        paper_details_batch_wrapper(args.batch_path, fields=args.fields)
     elif args.paper_title:
         id = search_paper_id(args.paper_title)
-        print(args.fields)
-        get_paper_details_batch(paper_ids=[id], fields=args.fields)
+        paper_details = get_paper_details_batch(paper_ids=[id, id], fields=args.fields)
+        extract_paper_details_batch(paper_details)

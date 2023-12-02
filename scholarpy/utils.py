@@ -4,6 +4,104 @@ import pandas as pd
 import os
 import requests
 from colorama import Fore, Style
+import csv
+from dotenv import load_dotenv
+
+load_dotenv()
+api_key = os.getenv("API_KEY")
+
+
+def write_to_csv(csv_path, fieldnames, data, modality="w"):
+    with open(csv_path, modality, newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        # If the file is empty, write the header
+        if modality == "w":
+            writer.writeheader()
+
+        writer.writerows(data)
+
+
+def get_paper_details_batch(
+    paper_ids, fields=["referenceCount", "citationCount", "title", "openAccessPdf"]
+):
+    base_url = "https://api.semanticscholar.org/graph/v1/paper/batch"
+    paper_ids = [id for id in paper_ids if id is not None]
+    print(f"get_paper_details_batch({paper_ids}, {fields})")
+    payload = {"ids": paper_ids}
+    response = make_api_request(
+        url=base_url,
+        params={"fields": ",".join(fields)},
+        payload=payload,
+        api_key=api_key,
+    )
+
+    if response.status_code == 200:
+        paper_details = response.json()
+        # Restituisci i dettagli, inclusi gli URL degli articoli in formato PDF
+        return paper_details
+    else:
+        print(f"Errore nella richiesta batch: {response.status_code} per {paper_ids}")
+        return None
+
+
+def extract_paper_details_batch(paper_details):
+    extracted_data = []
+    for paper in paper_details:
+        extracted_paper = {}
+
+        # Estrai i dettagli richiesti
+        extracted_paper["title"] = paper.get("title", "")
+        extracted_paper["citationStyles"] = paper.get("citationStyles", "")
+        extracted_paper["authors"] = ", ".join(
+            [author["name"] for author in paper.get("authors", [])]
+        )
+        extracted_paper["year"] = paper.get("year", "")
+        try:
+            extracted_paper["journal"] = paper.get("journal", "").get("name", "")
+        except:
+            extracted_paper["journal"] = "N/A"
+        try:
+            external_ids = paper.get("externalIds", {})
+            extracted_paper["DOI"] = (
+                external_ids.get("DOI", "N/A") if external_ids else "N/A"
+            )
+        except:
+            pass
+
+        extracted_data.append(extracted_paper)
+
+    csv_path = "paper_details.csv"
+    fieldnames = ["title", "citationStyles", "authors", "year", "journal", "DOI"]
+    print(extracted_data)
+    write_to_csv(csv_path, fieldnames, extracted_data, modality="a")
+
+    return extracted_data
+
+
+def search_paper_id(paper_title):
+    base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
+    search_url = f"{base_url}?query={paper_title}"
+
+    response = make_api_request(search_url, api_key=api_key)
+
+    if response.status_code == 200:
+        search_data = response.json()
+        papers = search_data.get("data", [])
+
+        if papers and papers[0].get("paperId") is not None:
+            # Return the paper ID of the first result of the search
+            return papers[0].get("paperId")
+        else:
+            print(f"No results found for '{paper_title}'. Writing to file.")
+            filename = f"paper_ids_not_found_for_these_titles.txt"
+
+            with open(filename, "a") as file:
+                file.write(f"{paper_title}\n")
+
+    else:
+        print(f"Error in single request: {response.status_code}")
+
 
 def clean_filename(title):
     # Rimuovi tutti i caratteri speciali non consentiti per i nomi di file
@@ -82,37 +180,35 @@ def create_folder_if_not_exists(folder_name):
         os.makedirs(folder_name)
 
 
-def make_api_request(url, api_key=None):
+def make_api_request(url, params=None, payload={}, api_key=None):
     headers = {}
     if api_key:
         headers["x-api-key"] = api_key
     else:
-        print(f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}"
+        )
 
-    response = requests.get(url, headers=headers)
-    
+    if params is None and payload == {}:
+        response = requests.get(url, headers=headers)
+    else:
+        response = requests.post(url, headers=headers, params=params, json=payload)
+
     while response.status_code >= 500:
         response = requests.get(url, headers=headers)
-    
+
     return response
 
-# Esempio di utilizzo
-# file_path = "bulk.txt"
-# result = read_and_split_lines(file_path)
-# print(result)
-# csv_files_list = [
-#     "Adversarial attacks on medical machine learning  Science.csv",
-#     "Big data and machine learning algorithms for health-care delivery - The Lancet Oncology.csv",
-#     "Do no harm a roadmap for responsible machine learning for health care Nature Medicine.csv",
-#     "Patient clustering improves efficiency of federated machine learning to predict mortality and hospital stay time using distributed electronic medical records  ScienceDirect.csv",
-#     "Preparing Medical Imaging Data for Machine Learning  Radiology (rsna.org).csv",
-#     "Secure, privacy-preserving and federated machine learning in medical imaging Nature Machine Intelligence.csv",
-#     "Swarm Learning for decentralized and confidential clinical machine learning  Nature.csv",
-#     "The importance of interpretability and visualization in machine learning for applications in medicine and health care  SpringerLink.csv",
-#     "What Clinicians Want Contextualizing Explainable Machine Learning for Clinical End Use (mlr.press).csv",
-# ]
-# csv_appender(csv_files_list)
 
+def paper_details_batch_wrapper(
+    paper_titles_txt_path,
+    fields=["titles", "citationStyles", "authors", "year", "journal"],
+):
+    paper_ids = []
+    paper_list = read_and_split_lines(paper_titles_txt_path)
+    for paper in paper_list:
+        paper_ids.append(search_paper_id(paper))
+    paper_ids = [id for id in paper_ids if id is not None]
 
-# names_list = get_csv_names("forward")
-# csv_appender(names_list)
+    papers_details = get_paper_details_batch(paper_ids, fields=fields)
+    extract_paper_details_batch(papers_details)

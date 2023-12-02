@@ -1,24 +1,14 @@
 import requests
 import json
 import os
-from scholarpy.utils import clean_filename, read_and_split_lines
+from scholarpy.utils import (
+    clean_filename,
+    read_and_split_lines,
+    get_paper_details_batch,
+)
 import argparse
 import time
 
-
-def get_paper_details(paper_ids):
-    base_url = "https://api.semanticscholar.org/graph/v1/paper/batch"
-    fields = "referenceCount,citationCount,title,openAccessPdf"
-
-    payload = {"ids": paper_ids}
-    response = requests.post(base_url, params={"fields": fields}, json=payload)
-    if response.status_code == 200:
-        paper_details = response.json()
-        # Restituisci i dettagli, inclusi gli URL degli articoli in formato PDF
-        return paper_details
-    else:
-        print(f"Errore nella richiesta: {response.status_code}")
-        return None
 
 def get_pdf_urls(paper_details):
     pdf_urls = []
@@ -88,12 +78,12 @@ def download_pdfs(pdf_urls, pdf_titles, download_path="pdf_downloads", max_retri
 def main():
     parser = argparse.ArgumentParser(description="Download PDFs for given paper IDs.")
     parser.add_argument(
-        "--bulk_path", type=str, help="File containing a list of paper IDs"
+        "--batch_path", type=str, help="File containing a list of paper IDs"
     )
     args = parser.parse_args()
     if args.bulk_path:
         paper_id_list = read_and_split_lines(args.bulk_path)
-        papers_details = get_paper_details(paper_id_list)
+        papers_details = get_paper_details_batch(paper_id_list)
         pdf_urls, pdf_titles = get_pdf_urls(papers_details)
         download_pdfs(pdf_urls, pdf_titles)
 

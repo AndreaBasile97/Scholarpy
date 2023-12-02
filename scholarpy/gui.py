@@ -4,8 +4,13 @@ from tkinter import ttk
 from scholarpy.snowballer import search_paper_id, get_citations_info
 from scholarpy.utils import clean_filename, read_and_split_lines
 import time
-from scholarpy.auto_pdf_downloader import get_paper_details, get_pdf_urls, download_pdfs
+from scholarpy.auto_pdf_downloader import (
+    get_paper_details_batch,
+    get_pdf_urls,
+    download_pdfs,
+)
 import threading
+
 
 class SnowballerGUI(tk.Frame):
     def __init__(self, master=None):
@@ -120,7 +125,9 @@ class BulkSnowballerGUI(tk.Frame):
         self.snowball_button.grid(row=2, column=0, columnspan=2, pady=10)
 
         # Progressbar
-        self.progressbar = ttk.Progressbar(self, orient="horizontal", mode="determinate")
+        self.progressbar = ttk.Progressbar(
+            self, orient="horizontal", mode="determinate"
+        )
         self.progressbar.grid(row=3, column=0, columnspan=2, pady=10)
 
         # Label for percentage
@@ -170,6 +177,7 @@ class BulkSnowballerGUI(tk.Frame):
         # Riattiva il pulsante al termine del processo
         self.snowball_button.config(state="normal")
 
+
 class AutoPDFdownloader(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
@@ -200,7 +208,7 @@ class AutoPDFdownloader(tk.Frame):
 
         paper_list_ids = read_and_split_lines(self.file_path)
 
-        papers_details = get_paper_details(paper_list_ids)
+        papers_details = get_paper_details_batch(paper_list_ids)
         pdf_urls, pdf_titles = get_pdf_urls(papers_details)
         download_pdfs(pdf_urls, pdf_titles)
         self.result_label.config(
@@ -217,7 +225,7 @@ class SnowballerApp(tk.Tk):
         self.create_menu()
         self.current_frame = None
         self.geometry("800x600")
-        
+
     def create_menu(self):
         menu_bar = tk.Menu(self)
 

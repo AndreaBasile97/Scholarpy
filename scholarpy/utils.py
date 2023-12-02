@@ -5,7 +5,6 @@ import os
 import requests
 from colorama import Fore, Style
 import csv
-import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -95,10 +94,7 @@ def search_paper_id(paper_title):
             return papers[0].get("paperId")
         else:
             print(f"No results found for '{paper_title}'. Writing to file.")
-
-            # Write the paper title to a file with timestamp
-            timestamp = int(time.time())
-            filename = f"{timestamp}_ids_not_found.txt"
+            filename = f"paper_ids_not_found_for_these_titles.txt"
 
             with open(filename, "a") as file:
                 file.write(f"{paper_title}\n")

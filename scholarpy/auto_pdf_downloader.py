@@ -78,7 +78,7 @@ def download_pdfs(pdf_urls, pdf_titles, download_path="pdf_downloads", max_retri
 def main():
     parser = argparse.ArgumentParser(description="Download PDFs for given paper IDs.")
     parser.add_argument(
-        "--bulk_path", type=str, help="File containing a list of paper IDs"
+        "--batch_path", type=str, help="File containing a list of paper IDs"
     )
     args = parser.parse_args()
     if args.bulk_path:

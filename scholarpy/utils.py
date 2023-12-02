@@ -5,7 +5,7 @@ import os
 import requests
 from colorama import Fore, Style
 import csv
-
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -91,12 +91,20 @@ def search_paper_id(paper_title):
         papers = search_data.get("data", [])
 
         if papers and papers[0].get("paperId") is not None:
-            # Restituisci il paper ID del primo risultato della ricerca
+            # Return the paper ID of the first result of the search
             return papers[0].get("paperId")
         else:
-            print(f"Nessun risultato trovato per '{paper_title}'.")
+            print(f"No results found for '{paper_title}'. Writing to file.")
+
+            # Write the paper title to a file with timestamp
+            timestamp = int(time.time())
+            filename = f"{timestamp}_ids_not_found.txt"
+
+            with open(filename, "a") as file:
+                file.write(f"{paper_title}\n")
+
     else:
-        print(f"Errore nella richiesta singola: {response.status_code}")
+        print(f"Error in single request: {response.status_code}")
 
 
 def clean_filename(title):

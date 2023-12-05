@@ -69,6 +69,7 @@ Scholarpy automatically logs papers not found in order to keep track of the whol
 
 1. The paper doesn't exists in Semantic Scholar knowledge base.
 2. The paper title is not correctly written or contains less/more words than the real title.
+3. If some results are not found they will be logged in a txt file for the sake of tracebility.
 
 
 ## Quick Start 🚀

@@ -73,34 +73,75 @@ def extract_paper_details_batch(paper_details):
 
     csv_path = "paper_details.csv"
     fieldnames = ["title", "citationStyles", "authors", "year", "journal", "DOI"]
-    print(extracted_data)
     write_to_csv(csv_path, fieldnames, extracted_data, modality="a")
 
     return extracted_data
 
 
+import time
+
 def search_paper_id(paper_title):
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
     search_url = f"{base_url}?query={paper_title}"
 
-    response = make_api_request(search_url, api_key=api_key)
+    retries = 3  # Number of retries in case of error 429
+    retry_delay = 10  # Delay in seconds before retrying
 
-    if response.status_code == 200:
-        search_data = response.json()
-        papers = search_data.get("data", [])
+    processed_titles = set()  # Set to store processed paper titles
 
-        if papers and papers[0].get("paperId") is not None:
-            # Return the paper ID of the first result of the search
-            return papers[0].get("paperId")
+    for attempt in range(retries):
+        if paper_title in processed_titles:
+            print(f"Skipping '{paper_title}' as it has already been processed.")
+            return None
+
+        response = make_api_request(search_url, api_key=api_key)
+
+        if response.status_code == 200:
+            search_data = response.json()
+            papers = search_data.get("data", [])
+
+            if papers and papers[0].get("paperId") is not None:
+                # Return the paper ID of the first result of the search
+                return papers[0].get("paperId")
+            else:
+                # Try with the cleaned filename
+                cleaned_title = clean_filename(paper_title)
+                cleaned_search_url = f"{base_url}?query={cleaned_title}"
+
+                cleaned_response = make_api_request(cleaned_search_url, api_key=api_key)
+
+                if cleaned_response.status_code == 200:
+                    cleaned_search_data = cleaned_response.json()
+                    cleaned_papers = cleaned_search_data.get("data", [])
+
+                    if cleaned_papers and cleaned_papers[0].get("paperId") is not None:
+                        # Return the paper ID of the first result with cleaned title
+                        return cleaned_papers[0].get("paperId")
+                    else:
+                        print(f"No results found for '{cleaned_title}'. Writing to file.")
+                        filename = "paper_ids_not_found_for_these_titles.txt"
+
+                        # Check if the title has not been processed before writing
+                        if paper_title not in processed_titles:
+                            with open(filename, "a") as file:
+                                file.write(f"{paper_title}\n")
+
+                            # Add the title to the set of processed titles
+                            processed_titles.add(paper_title)
+                else:
+                    print(f"Error in cleaned request: {cleaned_response.status_code}")
+        elif response.status_code == 429:
+            # Retry after waiting for a specified delay
+            print(f"Error 429 - Too Many Requests. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
         else:
-            print(f"No results found for '{paper_title}'. Writing to file.")
-            filename = f"paper_ids_not_found_for_these_titles.txt"
+            print(f"Error in single request: {response.status_code}")
 
-            with open(filename, "a") as file:
-                file.write(f"{paper_title}\n")
+    print(f"Exceeded maximum retries for '{paper_title}'.")
+    return None  # Or handle the failure in an appropriate way
 
-    else:
-        print(f"Error in single request: {response.status_code}")
+
+
 
 
 def clean_filename(title):
@@ -206,6 +247,7 @@ def paper_details_batch_wrapper(
 ):
     paper_ids = []
     paper_list = read_and_split_lines(paper_titles_txt_path)
+    paper_list = list(filter(lambda x: x != "", paper_list))
     for paper in paper_list:
         paper_ids.append(search_paper_id(paper))
     paper_ids = [id for id in paper_ids if id is not None]

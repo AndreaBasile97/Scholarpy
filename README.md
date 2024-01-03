@@ -22,7 +22,7 @@ Thanks to Scholarpy, you can easily perform snowballing and obtain a CSV file co
 
 **Using command-line arguments for single paper snowballing:**
 
-
+    # Use paper_title OR paper_id
     python -m scholarpy.snowballer --paper_title '' --paper_id '' --limit 1000 --csv_filename papers.csv --forward True
 
 

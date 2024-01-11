@@ -7,7 +7,6 @@ from colorama import Fore, Style
 import csv
 from dotenv import load_dotenv
 from fuzzywuzzy import fuzz
-import time
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
@@ -75,6 +74,7 @@ def extract_paper_details_batch(paper_details):
 
     csv_path = "paper_details.csv"
     fieldnames = ["title", "citationStyles", "authors", "year", "journal", "DOI"]
+    print(extracted_data)
     write_to_csv(csv_path, fieldnames, extracted_data, modality="a")
 
     return extracted_data
@@ -86,11 +86,6 @@ def clean_paper_title(paper_title):
     return cleaned_title
 
 
-def is_similar(title1, title2):
-    # Check if the Levenshtein distance is greater than 85
-    return fuzz.ratio(title1, title2) > 85
-
-
 def search_paper_id(paper_title):
     # Clean the paper title before making the API request
     cleaned_title = clean_paper_title(paper_title)
@@ -98,69 +93,38 @@ def search_paper_id(paper_title):
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
     search_url = f"{base_url}?query={cleaned_title}"
 
-    retries = 3  # Number of retries in case of error 429
-    retry_delay = 10  # Delay in seconds before retrying
+    response = make_api_request(search_url, api_key=api_key)
 
-    processed_titles = set()  # Set to store processed paper titles
+    if response.status_code == 200:
+        search_data = response.json()
+        papers = search_data.get("data", [])
 
-    for attempt in range(retries):
-        if paper_title in processed_titles:
-            print(f"Skipping '{paper_title}' as it has already been processed.")
-            return None
-
-        response = make_api_request(search_url, api_key=api_key)
-
-        if response.status_code == 200:
-            search_data = response.json()
-            papers = search_data.get("data", [])
-
-            if papers and papers[0].get("paperId") is not None:
-                # Check similarity between original title and found title
-                if is_similar(paper_title, papers[0].get("title")):
-                    # Return the paper ID of the first result of the search
-                    return papers[0].get("paperId")
-            else:
-                # Try with the cleaned filename
-                cleaned_title = clean_filename(paper_title)
-                cleaned_search_url = f"{base_url}?query={cleaned_title}"
-
-                cleaned_response = make_api_request(cleaned_search_url, api_key=api_key)
-
-                if cleaned_response.status_code == 200:
-                    cleaned_search_data = cleaned_response.json()
-                    cleaned_papers = cleaned_search_data.get("data", [])
-
-                    if cleaned_papers and cleaned_papers[0].get("paperId") is not None:
-                        # Check similarity between original title and cleaned title
-                        if is_similar(paper_title, cleaned_papers[0].get("title")):
-                            # Return the paper ID of the first result with cleaned title
-                            return cleaned_papers[0].get("paperId")
-                    else:
-                        print(
-                            f"No results found for '{cleaned_title}'. Writing to file."
-                        )
-                        filename = "paper_ids_not_found_for_these_titles.txt"
-
-                        # Check if the title has not been processed before writing
-                        if paper_title not in processed_titles:
-                            with open(filename, "a") as file:
-                                file.write(f"{paper_title}\n")
-
-                            # Add the title to the set of processed titles
-                            processed_titles.add(paper_title)
-                else:
-                    print(f"Error in cleaned request: {cleaned_response.status_code}")
-        elif response.status_code == 429:
-            # Retry after waiting for a specified delay
-            print(
-                f"Error 429 - Too Many Requests. Retrying in {retry_delay} seconds..."
+        if papers and papers[0].get("paperId") is not None:
+            # Check for similarity between cleaned_title and the title of the first result
+            title_similarity = fuzz.ratio(
+                cleaned_title.lower(), papers[0].get("title").lower()
             )
-            time.sleep(retry_delay)
-        else:
-            print(f"Error in single request: {response.status_code}")
 
-    print(f"Exceeded maximum retries for '{paper_title}'.")
-    return None  # Or handle the failure in an appropriate way
+            if title_similarity >= 85:
+                # Return the paper ID of the first result if similarity is greater than 90%
+                return papers[0].get("paperId")
+            else:
+                print(
+                    f"Title similarity is below 90% for '{cleaned_title}'. Writing to file."
+                )
+                filename = "paper_titles_not_similar.txt"
+
+                with open(filename, "a") as file:
+                    file.write(f"{cleaned_title} - {papers[0].get('title')}\n")
+        else:
+            print(f"No results found for '{cleaned_title}'. Writing to file.")
+            filename = "paper_ids_not_found_for_these_titles.txt"
+
+            with open(filename, "a") as file:
+                file.write(f"{cleaned_title}\n")
+
+    else:
+        print(f"Error in single request: {response.status_code}")
 
 
 def clean_filename(title):
@@ -266,7 +230,6 @@ def paper_details_batch_wrapper(
 ):
     paper_ids = []
     paper_list = read_and_split_lines(paper_titles_txt_path)
-    paper_list = list(filter(lambda x: x != "", paper_list))
     for paper in paper_list:
         paper_ids.append(search_paper_id(paper))
     paper_ids = [id for id in paper_ids if id is not None]

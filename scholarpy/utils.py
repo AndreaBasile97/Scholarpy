@@ -6,6 +6,7 @@ import requests
 from colorama import Fore, Style
 import csv
 from dotenv import load_dotenv
+from fuzzywuzzy import fuzz
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
@@ -79,9 +80,18 @@ def extract_paper_details_batch(paper_details):
     return extracted_data
 
 
+def clean_paper_title(paper_title):
+    # Remove "|" and everything to the right of it
+    cleaned_title = paper_title.split("|")[0].strip()
+    return cleaned_title
+
+
 def search_paper_id(paper_title):
+    # Clean the paper title before making the API request
+    cleaned_title = clean_paper_title(paper_title)
+
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
-    search_url = f"{base_url}?query={paper_title}"
+    search_url = f"{base_url}?query={cleaned_title}"
 
     response = make_api_request(search_url, api_key=api_key)
 
@@ -90,14 +100,28 @@ def search_paper_id(paper_title):
         papers = search_data.get("data", [])
 
         if papers and papers[0].get("paperId") is not None:
-            # Return the paper ID of the first result of the search
-            return papers[0].get("paperId")
+            # Check for similarity between cleaned_title and the title of the first result
+            title_similarity = fuzz.ratio(
+                cleaned_title.lower(), papers[0].get("title").lower()
+            )
+
+            if title_similarity >= 85:
+                # Return the paper ID of the first result if similarity is greater than 90%
+                return papers[0].get("paperId")
+            else:
+                print(
+                    f"Title similarity is below 90% for '{cleaned_title}'. Writing to file."
+                )
+                filename = "paper_titles_not_similar.txt"
+
+                with open(filename, "a") as file:
+                    file.write(f"{cleaned_title} - {papers[0].get('title')}\n")
         else:
-            print(f"No results found for '{paper_title}'. Writing to file.")
-            filename = f"paper_ids_not_found_for_these_titles.txt"
+            print(f"No results found for '{cleaned_title}'. Writing to file.")
+            filename = "paper_ids_not_found_for_these_titles.txt"
 
             with open(filename, "a") as file:
-                file.write(f"{paper_title}\n")
+                file.write(f"{cleaned_title}\n")
 
     else:
         print(f"Error in single request: {response.status_code}")

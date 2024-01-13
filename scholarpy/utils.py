@@ -117,7 +117,7 @@ def search_paper_id(paper_title, max_retries=3, retry_delay=10):
                         f"Title similarity is below 90% for '{cleaned_title}'. Writing to file."
                     )
                     filename = "paper_titles_not_similar.txt"
-
+                    retries += 1
                     with open(filename, "a") as file:
                         file.write(f"{cleaned_title} - {papers[0].get('title')}\n")
             else:

@@ -6,6 +6,7 @@ import requests
 from colorama import Fore, Style
 import csv
 from dotenv import load_dotenv
+from fuzzywuzzy import fuzz
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
@@ -79,28 +80,63 @@ def extract_paper_details_batch(paper_details):
     return extracted_data
 
 
-def search_paper_id(paper_title):
+def clean_paper_title(paper_title):
+    # Remove "|" and everything to the right of it
+    cleaned_title = paper_title.split("|")[0].strip()
+    return cleaned_title
+
+
+import time
+
+def search_paper_id(paper_title, max_retries=3, retry_delay=10):
+    # Clean the paper title before making the API request
+    cleaned_title = clean_paper_title(paper_title)
+
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
-    search_url = f"{base_url}?query={paper_title}"
+    search_url = f"{base_url}?query={cleaned_title}"
 
-    response = make_api_request(search_url, api_key=api_key)
+    retries = 0
+    while retries < max_retries:
+        response = make_api_request(search_url, api_key=api_key)
 
-    if response.status_code == 200:
-        search_data = response.json()
-        papers = search_data.get("data", [])
+        if response.status_code == 200:
+            search_data = response.json()
+            papers = search_data.get("data", [])
 
-        if papers and papers[0].get("paperId") is not None:
-            # Return the paper ID of the first result of the search
-            return papers[0].get("paperId")
+            if papers and papers[0].get("paperId") is not None:
+                # Check for similarity between cleaned_title and the title of the first result
+                title_similarity = fuzz.ratio(
+                    cleaned_title.lower(), papers[0].get("title").lower()
+                )
+
+                if title_similarity >= 85:
+                    # Return the paper ID of the first result if similarity is greater than 90%
+                    return papers[0].get("paperId")
+                else:
+                    print(
+                        f"Title similarity is below 90% for '{cleaned_title}'. Writing to file."
+                    )
+                    filename = "paper_titles_not_similar.txt"
+
+                    with open(filename, "a") as file:
+                        file.write(f"{cleaned_title} - {papers[0].get('title')}\n")
+            else:
+                print(f"No results found for '{cleaned_title}'. Writing to file.")
+                filename = "paper_ids_not_found_for_these_titles.txt"
+                retries += 1
+                with open(filename, "a") as file:
+                    file.write(f"{cleaned_title}\n")
+        elif response.status_code == 429:
+            # Retry after waiting for the specified delay
+            print(f"Too Many Requests. Retrying after {retry_delay} seconds.")
+            time.sleep(retry_delay)
+            retries += 1
         else:
-            print(f"No results found for '{paper_title}'. Writing to file.")
-            filename = f"paper_ids_not_found_for_these_titles.txt"
+            print(f"Error in single request: {response.status_code}")
+            break
 
-            with open(filename, "a") as file:
-                file.write(f"{paper_title}\n")
-
-    else:
-        print(f"Error in single request: {response.status_code}")
+    print(f"Max retries reached for '{cleaned_title}'. Exiting.")
+    return None
 
 
 def clean_filename(title):
@@ -181,6 +217,7 @@ def create_folder_if_not_exists(folder_name):
 
 
 def make_api_request(url, params=None, payload={}, api_key=None):
+    
     headers = {}
     if api_key:
         headers["x-api-key"] = api_key
@@ -188,7 +225,6 @@ def make_api_request(url, params=None, payload={}, api_key=None):
         print(
             f"{Fore.YELLOW}Warning: API key not provided. Some API calls may be limited.{Style.RESET_ALL}"
         )
-
     if params is None and payload == {}:
         response = requests.get(url, headers=headers)
     else:

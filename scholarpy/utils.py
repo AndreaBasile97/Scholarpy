@@ -246,5 +246,10 @@ def paper_details_batch_wrapper(
         paper_ids.append(search_paper_id(paper))
     paper_ids = [id for id in paper_ids if id is not None]
 
+    # Save paper IDs into a text file
+    with open("paper_ids.txt", "w") as ids_file:
+        for paper_id in paper_ids:
+            ids_file.write(f"{paper_id}\n")
+
     papers_details = get_paper_details_batch(paper_ids, fields=fields)
     extract_paper_details_batch(papers_details)

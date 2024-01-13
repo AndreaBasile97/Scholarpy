@@ -81,8 +81,8 @@ def main():
         "--batch_path", type=str, help="File containing a list of paper IDs"
     )
     args = parser.parse_args()
-    if args.bulk_path:
-        paper_id_list = read_and_split_lines(args.bulk_path)
+    if args.batch_path:
+        paper_id_list = read_and_split_lines(args.batch_path)
         papers_details = get_paper_details_batch(paper_id_list)
         pdf_urls, pdf_titles = get_pdf_urls(papers_details)
         download_pdfs(pdf_urls, pdf_titles)

@@ -117,7 +117,7 @@ def search_paper_id(paper_title, max_retries=3, retry_delay=10):
                         f"Title similarity is below 90% for '{cleaned_title}'. Writing to file."
                     )
                     filename = "paper_titles_not_similar.txt"
-
+                    retries += 1
                     with open(filename, "a") as file:
                         file.write(f"{cleaned_title} - {papers[0].get('title')}\n")
             else:
@@ -245,6 +245,11 @@ def paper_details_batch_wrapper(
     for paper in paper_list:
         paper_ids.append(search_paper_id(paper))
     paper_ids = [id for id in paper_ids if id is not None]
+
+    # Save paper IDs into a text file
+    with open("paper_ids.txt", "w") as ids_file:
+        for paper_id in paper_ids:
+            ids_file.write(f"{paper_id}\n")
 
     papers_details = get_paper_details_batch(paper_ids, fields=fields)
     extract_paper_details_batch(papers_details)

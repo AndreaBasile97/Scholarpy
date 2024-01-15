@@ -207,7 +207,6 @@ class AutoPDFdownloader(tk.Frame):
             return
 
         paper_list_ids = read_and_split_lines(self.file_path)
-
         papers_details = get_paper_details_batch(paper_list_ids)
         pdf_urls, pdf_titles = get_pdf_urls(papers_details)
         download_pdfs(pdf_urls, pdf_titles)

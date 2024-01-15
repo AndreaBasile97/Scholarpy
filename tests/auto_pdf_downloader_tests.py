@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import patch, MagicMock
 from scholarpy.auto_pdf_downloader import (
     get_paper_details_batch,
-    get_pdf_urls,
     download_pdfs,
 )
 from scholarpy.utils import clean_filename
